@@ -3,11 +3,16 @@ package main
 import (
 	"errors"
 	"fmt"
-	//"log"
+	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	CSV_FILE_MODE os.FileMode = 0644
 )
 
 // A CpuStat records the cpu usage, as % as returned by ps of a process
@@ -60,12 +65,25 @@ func ProcessCpuStat(pid uint) (cs *CpuStat, err error) {
 	return
 }
 
+// Return an *os.File that can be used to write csv records.
+// folder is the destination where the csv file will be created. In that folder,
+// the program will create a file called pscpu_<pid>.csv. If the file already
+// exists, new lines will be appended.
+// An error will be returned if there's an error opening the file.
+func GetCsvFile(folder string, pid uint) (csvFile *os.File, err error) {
+	// Create the final csv path
+	csvFilePath := path.Join(folder, fmt.Sprintf("pscpu_%v.csv", pid))
+	// Open/create the file
+	csvFile, err = os.OpenFile(csvFilePath,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, // append or create it in write only
+		CSV_FILE_MODE)
+	if err != nil {
+		err = errors.New(fmt.Sprintf(
+			"Error when creating/opening the csv file. %v", err.Error()))
+	}
+	return
+}
+
 func main() {
 	fmt.Println("pscpu!")
-	cs, err := ProcessCpuStat(123123)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(cs.String())
-	}
 }

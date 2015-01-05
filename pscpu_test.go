@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 	"time"
 )
@@ -49,5 +50,53 @@ func TestCpuStatstring(t *testing.T) {
 	}
 	if stat.String() != "2014-01-02T18:26:56Z - 89.0" {
 		t.Errorf("Invalid string: %v", stat.String())
+	}
+}
+
+func TestGetCsvFileNew(t *testing.T) {
+	// Test with a new file in a valid folder
+	folder := "/tmp/"
+	csvFile, err := GetCsvFile(folder, 1)
+	if err != nil {
+		t.Errorf("New file should be created without errors: %v", csvFile.Name())
+	} else {
+		// Clean tmp folder
+		csvFile.Close()
+		os.Remove(csvFile.Name())
+	}
+}
+
+func TestGetCsvFileAppend(t *testing.T) {
+	// Test with an existing file
+	// First create the file and close it
+	folder := "/tmp/"
+	csvFile, _ := GetCsvFile(folder, 1)
+	csvFile.Close()
+	// Re-open it
+	csvFile, err := GetCsvFile(folder, 1)
+	if err != nil {
+		t.Errorf("File should be opened in append mode without errors: %v", csvFile.Name())
+	} else {
+		// Clean tmp folder
+		csvFile.Close()
+		os.Remove(csvFile.Name())
+	}
+}
+
+func TestGetCsvFileNonExistingFolder(t *testing.T) {
+	// Test creating a file in a non existing folder
+	folder := "/non-existing-folder/"
+	_, err := GetCsvFile(folder, 1)
+	if err == nil {
+		t.Errorf("Error expected creating the file in a non-existing folder: %v", folder)
+	}
+}
+
+func TestGetCsvFileNoPermissions(t *testing.T) {
+	// Test creating a file in a folder where the user doesn't have permissions
+	folder := "/root/"
+	_, err := GetCsvFile(folder, 1)
+	if err == nil {
+		t.Errorf("Error expected creating the file in folder without privileges: %v", folder)
 	}
 }
