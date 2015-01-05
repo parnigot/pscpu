@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,11 @@ import (
 )
 
 const (
-	CSV_FILE_MODE os.FileMode = 0644
+	VERSION                 string      = "0.1"
+	CSV_FILE_MODE           os.FileMode = 0644
+	DEFAULT_CSV_FOLDER_PATH string      = "" // current working directory
+	DEFAULT_PID             uint        = 0
+	DEFAULT_SECONDS         uint        = 5
 )
 
 // A CpuStat records the cpu usage, as % as returned by ps of a process
@@ -84,6 +89,34 @@ func GetCsvFile(folder string, pid uint) (csvFile *os.File, err error) {
 	return
 }
 
+func initFlags() (pid uint, csvFolderPath string, seconds uint) {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "pscpu - v%v\n\n", VERSION)
+		fmt.Fprintln(os.Stderr, "Monitor cpu usage in % of a process to a csv file.")
+		fmt.Fprintln(os.Stderr, "Each line of the csv file will be in the format:\n")
+		fmt.Fprintln(os.Stderr, "	RFC3339_TIMESTAMP,CPU_USAGE\n")
+		fmt.Fprintln(os.Stderr, "For example: 2015-01-05T14:44:05+01:00,66.6\n")
+		fmt.Fprintln(os.Stderr, "Usage:")
+		flag.PrintDefaults()
+	}
+	// Create all the flags
+	flag.UintVar(&pid, "pid", DEFAULT_PID,
+		"REQUIRED, the pid of the process to monitor")
+	flag.StringVar(&csvFolderPath, "f", DEFAULT_CSV_FOLDER_PATH,
+		"output folder of the csv file, defaults to current working directory")
+	flag.UintVar(&seconds, "s", DEFAULT_SECONDS,
+		"collect stats of cpu usage every s seconds")
+	// Parse the Flags
+	flag.Parse()
+	// Additional error checking
+	if pid == DEFAULT_PID {
+		fmt.Fprintf(os.Stderr, "Invalid pid: %d\n", pid)
+	}
+	return
+}
+
 func main() {
-	fmt.Println("pscpu!")
+	// Process args
+	initFlags()
+
 }
