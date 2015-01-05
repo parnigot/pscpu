@@ -28,8 +28,7 @@ func (cs *CpuStat) ToCsvRecord() (csvRecord []string) {
 
 // Return a string representation of the CpuStat
 func (cs *CpuStat) String() string {
-	csv := cs.ToCsvRecord()
-	return fmt.Sprintf("%v - %v", csv[0], csv[1])
+	return strings.Join(cs.ToCsvRecord(), " - ")
 }
 
 // Returns a CpuStat for a the process with the given PID
