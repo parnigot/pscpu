@@ -1,14 +1,18 @@
 package main
 
 import (
+	"encoding/csv"
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -110,13 +114,47 @@ func initFlags() (pid uint, csvFolderPath string, seconds uint) {
 	flag.Parse()
 	// Additional error checking
 	if pid == DEFAULT_PID {
-		fmt.Fprintf(os.Stderr, "Invalid pid: %d\n", pid)
+		log.Fatalf("Invalid pid: %d\n", pid)
 	}
 	return
 }
 
 func main() {
 	// Process args
-	initFlags()
-
+	pid, csvFolderPath, seconds := initFlags()
+	// Open the output file
+	csvFile, err := GetCsvFile(csvFolderPath, pid)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// Create the csv.Writer
+	csvWriter := csv.NewWriter(csvFile)
+	// Capture ctrl+c and other kill signals to clean up
+	interruptChannel := make(chan os.Signal, 1)
+	signal.Notify(interruptChannel, os.Interrupt)
+	signal.Notify(interruptChannel, syscall.SIGTERM)
+	go func() {
+		<-interruptChannel
+		csvWriter.Flush()
+		csvFile.Close()
+		os.Exit(0)
+	}()
+	// Run the main program loop
+	var cs *CpuStat
+	for {
+		// Collect the stats
+		cs, err = ProcessCpuStat(pid)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// Write them to the csv file
+		err = csvWriter.Write(cs.ToCsvRecord())
+		if err != nil {
+			log.Fatalln(err)
+		}
+		// Output human readable stats to stdout
+		fmt.Println(cs.String())
+		// Sleep for requested time and resume
+		time.Sleep(time.Duration(seconds) * time.Second)
+	}
 }
